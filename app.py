@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request
+from decimal import Decimal
 import joblib
 import pandas as pd
 import numpy as np
@@ -19,10 +20,18 @@ def countStep():
     if request.method == "POST":
         if 'data' not in request.json:
             return jsonify({"error": "No data found to process"}, 400)
-        model = joblib.load("stepCounterModel.joblib")
-        prediction = model.predict(request.json["data"])
-        count = np.sum(prediction, dtype=np.int64)
-        return jsonify({"code": 200, "count": count.item()})
+            
+        stepCountModel = joblib.load("stepCounterModel.joblib")
+        stepSizeModel = joblib.load("stepSizePredictionModel.joblib")
+
+        stepCountPrediction = stepCountModel.predict(request.json["data"])
+        stepSizePrediction = stepSizeModel.predict(
+            [[request.json["age"], request.json["height"], request.json["weight"], request.json["gender"]]])
+       
+        count = np.sum(stepCountPrediction, dtype=np.int64)
+        stepSize = '{:.3f}'.format(np.array(stepSizePrediction)[0])
+        stepSize =  float(stepSize)
+        return jsonify({"code": 200, "count": count.item(), "step_size": stepSize})
 
     return jsonify({"error": "Request error"}, 400)
 
